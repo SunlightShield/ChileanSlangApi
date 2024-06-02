@@ -1,37 +1,38 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using FireSharp.Interfaces;
-using FireSharp.Response;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Firebase.Database;
 
-namespace FirebaseApi.Controllers
+namespace ChileanSlagApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class FirebaseController : ControllerBase
+    public class DataController : ControllerBase
     {
-        private readonly IFirebaseClient _firebaseClient;
+        private readonly GetAllData _getAllData;
+        private readonly ILogger<DataController> _logger;
 
-        public FirebaseController(IFirebaseClient firebaseClient)
+        public DataController(GetAllData getAllData, ILogger<DataController> logger)
         {
-            _firebaseClient = firebaseClient;
+            _getAllData = getAllData;
+            _logger = logger;
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id)
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAll()
         {
-            FirebaseResponse response = await _firebaseClient.GetAsync("your-node/" + id);
-            var data = response.ResultAs<object>(); // Cambia 'object' por tu modelo de datos
-            return Ok(data);
+            try
+            {
+                _logger.LogInformation("Received request to get all data.");
+                var data = await _getAllData.GetAllAsync();
+                return Ok(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while getting all data.");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
-
-        [HttpPost]
-        public async Task<IActionResult> Post([FromBody] object data) // Cambia 'object' por tu modelo de datos
-        {
-            PushResponse response = await _firebaseClient.PushAsync("your-node", data);
-            return Ok(response.Result);
-        }
-
-        // Otros métodos (PUT, DELETE, etc.) pueden ser agregados aquí
     }
 }

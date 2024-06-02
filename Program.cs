@@ -1,35 +1,35 @@
 using ChileanSlagApi;
-using Firebase.Database;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
-using System.IO;
-using FireSharp.Interfaces;
-using FireSharp.Config;
-using FireSharp;
+using Google.Cloud.Firestore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
+// Configurar la variable de entorno para las credenciales de Firestore
+string pathToCredentials = "C:\\Users\\sespi\\source\\repos\\chileanslang-firebase-adminsdk-prtqf-ff6b5a2406.json";
+Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", pathToCredentials);
+
 // Add services to the container.
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configure Firebase
-builder.Services.Configure<FirebaseConfig>(builder.Configuration.GetSection("Firebase"));
-builder.Services.AddScoped<IFirebaseClient>(provider =>
+// Configure Firestore
+builder.Services.AddSingleton<FirestoreDb>(provider =>
 {
-    var config = provider.GetService<IOptions<FirebaseConfig>>().Value;
-    return new FireSharp.FirebaseClient(new FireSharp.Config.FirebaseConfig
-    {
-        BasePath = config.BasePath,
-        AuthSecret = config.AuthSecret
-    });
+    var projectId = builder.Configuration["Firebase:ProjectId"];
+    return FirestoreDb.Create(projectId);
 });
+
+// Register GetAllData as a service
+builder.Services.AddScoped<GetAllData>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -37,7 +37,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
